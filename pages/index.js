@@ -1,65 +1,81 @@
-import Head from 'next/head'
-import styles from '../styles/Home.module.css'
+import React, { useEffect, useState } from "react";
+import { loadStripe } from "@stripe/stripe-js";
+import {
+  Elements,
+  CardElement,
+  useStripe,
+  useElements,
+} from "@stripe/react-stripe-js";
+import axios from "axios";
 
-export default function Home() {
+const CheckoutForm = ({ setStatus }) => {
+  const stripe = useStripe();
+  const elements = useElements();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (elements === null) return;
+    const { error, paymentMethod } = await stripe.createPaymentMethod({
+      type: "card",
+      card: elements.getElement(CardElement),
+    });
+
+    if (!error) {
+      const { id } = paymentMethod;
+      try {
+        const response = await axios.post("/api/payment", { id, amount: 1099 });
+        console.log("response in component", response);
+        setStatus("success");
+      } catch (error) {
+        setStatus("Something went wrong. Please try again");
+      }
+    }
+  };
+
   return (
-    <div className={styles.container}>
-      <Head>
-        <title>Create Next App</title>
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
+    <form
+      style={{ maxWidth: "400px", margin: "0 auto" }}
+      onSubmit={handleSubmit}
+    >
+      <div
+        style={{ display: "flex", justifyContent: "center", margin: "20px" }}
+      >
+        <h2></h2>
+        <img
+          style={{ width: "300px", height: "auto", margin: "0 auto" }}
+          src="https://images.unsplash.com/photo-1541167760496-1628856ab772?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=2900&q=80"
+        />
+      </div>
+      <CardElement />
+      <button type="submit" disabled={!stripe || !elements}>
+        Pay
+      </button>
+    </form>
+  );
+};
 
-      <main className={styles.main}>
-        <h1 className={styles.title}>
-          Welcome to <a href="https://nextjs.org">Next.js!</a>
-        </h1>
+const stripeProme = loadStripe(
+  "pk_test_51IyTvuFZDO5hciT2zejiYSkheK3Nb3oYzjE9KWZYkJbtRWI2ls3YLqoLJAK4xMqi60VUV9lFJZZ352CvCVRSEPao00WMNjNFkk"
+);
 
-        <p className={styles.description}>
-          Get started by editing{' '}
-          <code className={styles.code}>pages/index.js</code>
-        </p>
+const Home = () => {
+  const [status, setStatus] = useState("");
+  console.log("status", status);
 
-        <div className={styles.grid}>
-          <a href="https://nextjs.org/docs" className={styles.card}>
-            <h3>Documentation &rarr;</h3>
-            <p>Find in-depth information about Next.js features and API.</p>
-          </a>
+  debugger;
+  if (status === "success") {
+    return <div>Thank you for your purchase!</div>;
+  }
 
-          <a href="https://nextjs.org/learn" className={styles.card}>
-            <h3>Learn &rarr;</h3>
-            <p>Learn about Next.js in an interactive course with quizzes!</p>
-          </a>
+  if (status.includes("Something went wrong")) {
+    return <div>Something went wrong</div>;
+  }
 
-          <a
-            href="https://github.com/vercel/next.js/tree/master/examples"
-            className={styles.card}
-          >
-            <h3>Examples &rarr;</h3>
-            <p>Discover and deploy boilerplate example Next.js projects.</p>
-          </a>
+  return (
+    <Elements stripe={stripeProme}>
+      <CheckoutForm setStatus={setStatus} />
+    </Elements>
+  );
+};
 
-          <a
-            href="https://vercel.com/import?filter=next.js&utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-          >
-            <h3>Deploy &rarr;</h3>
-            <p>
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
-        </div>
-      </main>
-
-      <footer className={styles.footer}>
-        <a
-          href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Powered by{' '}
-          <img src="/vercel.svg" alt="Vercel Logo" className={styles.logo} />
-        </a>
-      </footer>
-    </div>
-  )
-}
+export default Home;
